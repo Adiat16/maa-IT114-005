@@ -1,3 +1,4 @@
+package M2;
 import java.util.Arrays;
 
 public class Problem2 {
@@ -18,11 +19,14 @@ public class Problem2 {
         double total = 0;
         String totalOutput = "";
         //hint: use the arr variable; don't diretly use the a1-a4 variables
-        //TODO add/edit code here
-       
+        for (double value : arr) { /*UCID: maa, Date: 9/29/2023, Explanation: I am
+            calculating the sum of all the elements in the "arr" array and storing the result in the "total" variable.
+            */
+            total += value;
+        }
         //set the double to a string variable
         //TODO ensure rounding is to two decimal places (i.e., 0.10, 0.01, 1.00)
-        totalOutput = total+"";
+        totalOutput = String.format("%.2f", total);
         //end add/edit section
         System.out.println("Total is " + totalOutput);
         System.out.println("End process");
