@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import Project.common.Constants;
 
@@ -21,6 +23,13 @@ public class Room implements AutoCloseable {
     private final static String LOGOFF = "logoff";
     private static Logger logger = Logger.getLogger(Room.class.getName());
 
+
+	// Regular expressions for text formatting
+	private static final String BOLD_REGEX = "\\*([^*]+)\\*";
+    private static final String ITALICS_REGEX = "-([^\\-]+)-";
+    private static final String UNDERLINE_REGEX = "_([^_]+)_";
+    private static final String COLOR_REGEX = "\\[([rgbsilver]*)\\s([a-zA-Z]+)\\s([rgbsilver]*)\\]";
+	
     public Room(String name) {
         this.name = name;
         isRunning = true;
@@ -138,6 +147,59 @@ public class Room implements AutoCloseable {
         return wasCommand;
     }
 
+	private void processCommands(ServerThread sender, String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+        if (message.startsWith("/roll")) {
+            processRollCommand(sender, message);
+        } else if (message.startsWith("/flip")) {
+            processFlipCommand(sender);
+        }
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+	private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+		// Remove the command prefix
+		String rollCommand = message.substring("/roll".length()).trim();
+
+		// Check if it's in Format 1: /roll # or Format 2: /roll #d#
+		Pattern format1Pattern = Pattern.compile("(\\d+)");
+		Pattern format2Pattern = Pattern.compile("(\\d+)d(\\d+)");
+	
+		Matcher format2Matcher = format2Pattern.matcher(rollCommand);
+		Matcher format1Matcher = format1Pattern.matcher(rollCommand);
+	
+		if (format2Matcher.matches()) {
+			int numberOfDice = Integer.parseInt(format2Matcher.group(1));
+			int sides = Integer.parseInt(format2Matcher.group(2));
+			int total = 0;
+			StringBuilder result = new StringBuilder("Rolled: [");
+	
+			for (int i = 0; i < numberOfDice; i++) {
+				int roll = (int) (Math.random() * sides) + 1;
+				result.append(roll);
+	
+				if (i < numberOfDice - 1) {
+					result.append(", ");
+				}
+	
+				total += roll;
+			}
+	
+			result.append("] Total: ").append(total);
+			sendMessage(sender, result.toString());
+		} else if (format1Matcher.matches()) {
+			int upperBound = Integer.parseInt(format1Matcher.group(1));
+			int result = (int) (Math.random() * upperBound) + 1;
+			sendMessage(sender, "Rolled: " + result);
+		} else {
+			sendMessage(sender, "Invalid roll command. Please use /roll # or /roll #d#.");
+		}
+	} // UCID: maa, Date: 11/13/23, Milestone 2
+
+	private void processFlipCommand(ServerThread sender) { // UCID: maa, Date: 11/13/23, Milestone 2
+        // Simulate a coin flip
+        String result = (Math.random() < 0.5) ? "Heads" : "Tails";
+        sendMessage(sender, "Flipped: " + result);
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
     // Command helper methods
     protected static void getRooms(String query, ServerThread client) {
         String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
@@ -180,16 +242,90 @@ public class Room implements AutoCloseable {
      * @param sender  The client sending the message
      * @param message The message to broadcast inside the room
      */
-    protected synchronized void sendMessage(ServerThread sender, String message) {
+
+     private String processBold(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+		System.out.println("Source Message (Bold): " + message);
+
+        Pattern pattern = Pattern.compile(BOLD_REGEX);
+        Matcher matcher = pattern.matcher(message);
+
+        while (matcher.find()) {
+            String boldText = "<b>" + matcher.group(1) + "</b>";
+            message = message.replace(matcher.group(0), boldText);
+        }
+		System.out.println("Formatted Message (Bold): " + message);
+        return message;
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+	 private String processItalics(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+		System.out.println("Source Message (Italics): " + message);
+        Pattern pattern = Pattern.compile(ITALICS_REGEX);
+        Matcher matcher = pattern.matcher(message);
+
+        while (matcher.find()) {
+            String italicText = "<i>" + matcher.group(1) + "</i>";
+            message = message.replace(matcher.group(0), italicText);
+        }
+		System.out.println("Formatted Message (Italics): " + message);
+        return message;
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+    private String processUnderline(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+		System.out.println("Source Message (Underline): " + message);
+        Pattern pattern = Pattern.compile(UNDERLINE_REGEX);
+        Matcher matcher = pattern.matcher(message);
+
+        while (matcher.find()) {
+            String underlineText = "<u>" + matcher.group(1) + "</u>";
+            message = message.replace(matcher.group(0), underlineText);
+        }
+		System.out.println("Formatted Message (Underline): " + message);
+        return message;
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+	    private String processColor(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+		System.out.println("Source Message (Color): " + message);
+        Pattern pattern = Pattern.compile(COLOR_REGEX);
+        Matcher matcher = pattern.matcher(message);
+
+        while (matcher.find()) {
+            String colorText = "<font color=" + matcher.group(2) + ">" + matcher.group(3) + "</font>";
+            message = message.replace(matcher.group(0), colorText);
+        }
+		System.out.println("Formatted Message (Color): " + message);
+        return message;
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+	private String formatMessage(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+		System.out.println("Source Message: " + message);
+        message = processBold(message);
+        message = processItalics(message);
+        message = processUnderline(message);
+        message = processColor(message);
+
+		System.out.println("Formatted Message: " + message);
+        return message;
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+	public void processTextFormatting(ServerThread sender, String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+        String formattedMessage = formatMessage(message);
+        sendMessage(sender, formattedMessage);
+    } // UCID: maa, Date: 11/13/23, Milestone 2
+
+
+	protected synchronized void sendMessage(ServerThread sender, String message) {
         if (!isRunning) {
             return;
         }
-        logger.info(String.format("Sending message to %s clients", clients.size()));
+
         if (sender != null && processCommands(message, sender)) {
-            // it was a command, don't broadcast
+            // It was a command, don't broadcast
             return;
         }
-        long from = sender == null ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
+
+        message = formatMessage(message); // Format the message for text display
+        long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
+
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
             ServerThread client = iter.next();
