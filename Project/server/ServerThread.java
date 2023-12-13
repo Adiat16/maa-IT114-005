@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -31,6 +33,7 @@ public class ServerThread extends Thread {
     private Room currentRoom;
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
     private long myClientId;
+    private List<String> muteList = new ArrayList<>();
 
     public void setClientId(long id) {
         myClientId = id;
@@ -157,6 +160,20 @@ public class ServerThread extends Thread {
         // p.setMessage(isConnected ? "connected" : "disconnected");
         p.setMessage(String.format("%s the room %s", (isConnected ? "Joined" : "Left"), currentRoom.getName()));
         return send(p);
+    }
+
+        public boolean isMuted(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
+        return muteList.contains(username);
+    }
+
+    public void mute(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
+        if (!muteList.contains(username)) {
+            muteList.add(username);
+        }
+    } 
+
+    public void unmute(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
+        muteList.remove(username);
     }
 
     private boolean send(Payload payload) {

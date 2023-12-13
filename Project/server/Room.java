@@ -112,7 +112,7 @@ public class Room implements AutoCloseable {
      */
     @Deprecated // not used in my project as of this lesson, keeping it here in case things
                 // change
-    private boolean processCommands(String message, ServerThread client) {
+    private boolean processCommands(String message, ServerThread client) { // UCID: maa, Date: 11/27/23, Milestone 3
         boolean wasCommand = false;
     
         try {
@@ -145,9 +145,29 @@ public class Room implements AutoCloseable {
                         String rollCommand = comm2[1];
                         processRollCommand(client, rollCommand);
                         break;
+                    case "mute":
+                        String targetUsername = comm2[1];
+                        processMuteCommand(client, targetUsername);
+                        break;
+                    case "unmute":
+                        targetUsername = comm2[1];
+                        processUnmuteCommand(client, targetUsername);
+                        break;
                     default:
                         wasCommand = false;
                         break;
+                }
+            } else if (message.startsWith("@")) { // UCID: maa, Date: 11/27/23, Milestone 3
+                // Whisper command
+                String[] parts = message.split(" ", 2);
+                if (parts.length == 2) {
+                    String targetUsername = parts[0].substring(1); // Remove the "@" symbol
+                    String whisperMessage = parts[1];
+                    sendWhisperMessage(client, targetUsername, whisperMessage);
+                    wasCommand = true;
+                } else {
+                    // Invalid whisper command
+                    client.sendMessage(Constants.DEFAULT_CLIENT_ID, "Invalid whisper command format.");
                 }
             }
         } catch (Exception e) {
@@ -155,7 +175,66 @@ public class Room implements AutoCloseable {
         }
     
         return wasCommand;
+    }// UCID: maa, Date: 11/27/23, Milestone 3
+
+    private void processMuteCommand(ServerThread sender, String targetUsername) {
+        // Check if the sender has the authority to mute
+        // For example, you may want to add a check like if (sender.isAdmin()) { ... }
+        if (sender != null && targetUsername != null && !targetUsername.isEmpty()) {
+            // Find the target ServerThread
+            ServerThread targetClient = findClientByUsername(targetUsername);
+    
+            if (targetClient != null) {
+                // Mute the target user
+                targetClient.mute(targetUsername);
+                sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' has been muted.");
+            } else {
+                // Target user not found
+                sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' not found.");
+            }
+        }
     }
+    
+    private void processUnmuteCommand(ServerThread sender, String targetUsername) {
+        // Check if the sender has the authority to unmute
+        // For example, you may want to add a check like if (sender.isAdmin()) { ... }
+        if (sender != null && targetUsername != null && !targetUsername.isEmpty()) {
+            // Find the target ServerThread
+            ServerThread targetClient = findClientByUsername(targetUsername);
+    
+            if (targetClient != null) {
+                // Unmute the target user
+                targetClient.unmute(targetUsername);
+                sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' has been unmuted.");
+            } else {
+                // Target user not found
+                sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' not found.");
+            }
+        }
+    }
+    
+    private void sendWhisperMessage(ServerThread sender, String targetUsername, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+        // Find the target ServerThread
+        ServerThread targetClient = findClientByUsername(targetUsername);
+    
+        if (targetClient != null) {
+            // Send the whisper message to both sender and target
+            sender.sendMessage(sender.getClientId(), "[Whisper to " + targetUsername + "]: " + message);
+            targetClient.sendMessage(sender.getClientId(), "[Whisper from " + sender.getClientName() + "]: " + message);
+        } else {
+            // Target user not found
+            sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' not found.");
+        }
+    } // UCID: maa, Date: 11/27/23, Milestone 3
+    
+    private ServerThread findClientByUsername(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
+        for (ServerThread client : clients) {
+            if (client.getClientName().equalsIgnoreCase(username)) {
+                return client;
+            }
+        }
+        return null; // Target user not found
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
 	private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		// Remove the command prefix
@@ -303,10 +382,7 @@ public class Room implements AutoCloseable {
 
 	    private String processColor(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		System.out.println("Source Message (Color): " + message);
-        Pattern pattern = Pattern.compile(COLOR_REGEX);
-        Matcher matcher = pattern.matcher(message);
 
-        String colorText = "<font color=" + matcher.group(2) + ">" + matcher.group(3) + "</font>";
         message = message.replace("[r", "<font color=red>").replace("r]","</font>");
         message = message.replace("[g", "<font color=green>").replace("g]","</font>");
         message = message.replace("[b", "<font color=blue>").replace("b]","</font>");        
@@ -348,13 +424,25 @@ public class Room implements AutoCloseable {
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
             ServerThread client = iter.next();
+    
+            // Check if the sender is muted by the client in the current iteration
+            if (client.isMuted(sender.getClientName())) {
+                // Skip broadcasting to muted clients
+                continue;
+            }
+    
             boolean messageSent = client.sendMessage(from, message);
             if (!messageSent) {
                 handleDisconnect(iter, client);
             }
         }
+    
+        // Broadcast the message to the muted sender as well
+        if (sender != null && sender.isMuted(sender.getClientName())) {
+            sender.sendMessage(from, message);
+        }
     }
-
+    
     protected synchronized void sendConnectionStatus(ServerThread sender, boolean isConnected) {
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
