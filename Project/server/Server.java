@@ -32,7 +32,6 @@ public enum Server {
             Socket incoming_client = null;
             logger.info(String.format("Server is listening on port %s", port));
             isRunning = true;
-            Room.server = this;
             startQueueManager();
             // create a lobby on start
             lobby = new Room(Constants.LOBBY);
@@ -147,6 +146,7 @@ public enum Server {
         } else {
             // TODO, all non-lobby rooms will be games
             Room room = new Room(roomName); //chatroom project can just use regular rooms
+            // GameRoom room = new GameRoom(roomName); // all other projects
             rooms.add(room);
             logger.info(String.format("Created new room %s", roomName));
             return true;

@@ -159,7 +159,7 @@ public class Room implements AutoCloseable {
 
 	private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		// Remove the command prefix
-		String rollCommand = message.substring("/roll".length()).trim();
+		String rollCommand = message;
 
 		// Check if it's in Format 1: /roll # or Format 2: /roll #d#
 		Pattern format1Pattern = Pattern.compile("(\\d+)");
