@@ -114,6 +114,7 @@ public class Room implements AutoCloseable {
                 // change
     private boolean processCommands(String message, ServerThread client) {
         boolean wasCommand = false;
+    
         try {
             if (message.startsWith(COMMAND_TRIGGER)) {
                 String[] comm = message.split(COMMAND_TRIGGER);
@@ -122,6 +123,7 @@ public class Room implements AutoCloseable {
                 String command = comm2[0];
                 String roomName;
                 wasCommand = true;
+    
                 switch (command) {
                     case CREATE_ROOM:
                         roomName = comm2[1];
@@ -136,6 +138,13 @@ public class Room implements AutoCloseable {
                     case LOGOFF:
                         Room.disconnectClient(client, this);
                         break;
+                    case "flip":
+                        processFlipCommand(client);
+                        break;
+                    case "roll":
+                        String rollCommand = comm2[1];
+                        processRollCommand(client, rollCommand);
+                        break;
                     default:
                         wasCommand = false;
                         break;
@@ -144,18 +153,11 @@ public class Room implements AutoCloseable {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    
         return wasCommand;
     }
 
-	private void processCommands(ServerThread sender, String message) { // UCID: maa, Date: 11/13/23, Milestone 2
-        if (message.startsWith("/roll")) {
-            processRollCommand(sender, message);
-        } else if (message.startsWith("/flip")) {
-            processFlipCommand(sender);
-        }
-    } // UCID: maa, Date: 11/13/23, Milestone 2
-
-	private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+	private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		// Remove the command prefix
 		String rollCommand = message.substring("/roll".length()).trim();
 
@@ -192,13 +194,13 @@ public class Room implements AutoCloseable {
 		} else {
 			sendMessage(sender, "Invalid roll command. Please use /roll # or /roll #d#.");
 		}
-	} // UCID: maa, Date: 11/13/23, Milestone 2
+	} // UCID: maa, Date: 11/27/23, Milestone 3
 
-	private void processFlipCommand(ServerThread sender) { // UCID: maa, Date: 11/13/23, Milestone 2
+	private void processFlipCommand(ServerThread sender) { // UCID: maa, Date: 11/27/23, Milestone 3
         // Simulate a coin flip
         String result = (Math.random() < 0.5) ? "Heads" : "Tails";
         sendMessage(sender, "Flipped: " + result);
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
     // Command helper methods
     protected static void getRooms(String query, ServerThread client) {
@@ -243,6 +245,7 @@ public class Room implements AutoCloseable {
      * @param message The message to broadcast inside the room
      */
 
+     
      private String processBold(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
 		System.out.println("Source Message (Bold): " + message);
 
@@ -313,19 +316,19 @@ public class Room implements AutoCloseable {
     } // UCID: maa, Date: 11/13/23, Milestone 2
 
 
-	protected synchronized void sendMessage(ServerThread sender, String message) {
+    protected synchronized void sendMessage(ServerThread sender, String message) {
         if (!isRunning) {
             return;
         }
-
+    
         if (sender != null && processCommands(message, sender)) {
             // It was a command, don't broadcast
             return;
         }
-
+    
         message = formatMessage(message); // Format the message for text display
         long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
-
+    
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
             ServerThread client = iter.next();
