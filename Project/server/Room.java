@@ -185,21 +185,20 @@ public class Room implements AutoCloseable {
 				total += roll;
 			}
 	
-			result.append("] Total: ").append(total);
-			sendMessage(sender, result.toString());
-		} else if (format1Matcher.matches()) {
-			int upperBound = Integer.parseInt(format1Matcher.group(1));
-			int result = (int) (Math.random() * upperBound) + 1;
-			sendMessage(sender, "Rolled: " + result);
-		} else {
-			sendMessage(sender, "Invalid roll command. Please use /roll # or /roll #d#.");
-		}
-	} // UCID: maa, Date: 11/27/23, Milestone 3
-
-	private void processFlipCommand(ServerThread sender) { // UCID: maa, Date: 11/27/23, Milestone 3
+            result.append("] Total: <b>").append(total).append("</b>");
+            sendMessage(sender, ("<i>" + result.toString() + "<i>"));
+        } else if (format1Matcher.matches()) {
+            int upperBound = Integer.parseInt(format1Matcher.group(1));
+            int result = (int) (Math.random() * upperBound) + 1;
+            sendMessage(sender, "Rolled: <b>" + result + "</b>");
+        } else {
+            sendMessage(sender, "<i>Invalid roll command. Please use /roll # or /roll #d#.</i>");
+        }
+    }
+    private void processFlipCommand(ServerThread sender) { // UCID: maa, Date: 11/27/23, Milestone 3
         // Simulate a coin flip
         String result = (Math.random() < 0.5) ? "Heads" : "Tails";
-        sendMessage(sender, "Flipped: " + result);
+        sendMessage(sender, "Flipped: <b>" + result + "</b>");
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
     // Command helper methods
@@ -246,34 +245,49 @@ public class Room implements AutoCloseable {
      */
 
      
-     private String processBold(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+     private String processBold(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		System.out.println("Source Message (Bold): " + message);
+        // Print the original message for debugging
 
+        // Define the regular expression pattern for detecting bold formatting
         Pattern pattern = Pattern.compile(BOLD_REGEX);
+        // Create a matcher object to find matches in the message
         Matcher matcher = pattern.matcher(message);
 
+        // Iterate through all matches in the message
         while (matcher.find()) {
+            // Create bold-formatted text using the matched content
             String boldText = "<b>" + matcher.group(1) + "</b>";
+            // Replace the original matched content with the formatted text
             message = message.replace(matcher.group(0), boldText);
         }
+
+        // Print the formatted message for debugging
 		System.out.println("Formatted Message (Bold): " + message);
         return message;
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	 private String processItalics(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
-		System.out.println("Source Message (Italics): " + message);
+	 private String processItalics(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+		// Print the original message for debugging
+        System.out.println("Source Message (Italics): " + message);
+        // Define the regular expression pattern for detecting italics formatting
         Pattern pattern = Pattern.compile(ITALICS_REGEX);
+        // Create a matcher object to find matches in the message
         Matcher matcher = pattern.matcher(message);
 
+        // Iterate through all matches in the message
         while (matcher.find()) {
+            // Create italics-formatted text using the matched content
             String italicText = "<i>" + matcher.group(1) + "</i>";
+            // Replace the original matched content with the formatted text
             message = message.replace(matcher.group(0), italicText);
         }
+        // Print the formatted message for debugging
 		System.out.println("Formatted Message (Italics): " + message);
         return message;
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
-    private String processUnderline(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+    private String processUnderline(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		System.out.println("Source Message (Underline): " + message);
         Pattern pattern = Pattern.compile(UNDERLINE_REGEX);
         Matcher matcher = pattern.matcher(message);
@@ -282,24 +296,26 @@ public class Room implements AutoCloseable {
             String underlineText = "<u>" + matcher.group(1) + "</u>";
             message = message.replace(matcher.group(0), underlineText);
         }
+
 		System.out.println("Formatted Message (Underline): " + message);
         return message;
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	    private String processColor(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+	    private String processColor(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		System.out.println("Source Message (Color): " + message);
         Pattern pattern = Pattern.compile(COLOR_REGEX);
         Matcher matcher = pattern.matcher(message);
 
-        while (matcher.find()) {
-            String colorText = "<font color=" + matcher.group(2) + ">" + matcher.group(3) + "</font>";
-            message = message.replace(matcher.group(0), colorText);
-        }
+        String colorText = "<font color=" + matcher.group(2) + ">" + matcher.group(3) + "</font>";
+        message = message.replace("[r", "<font color=red>").replace("r]","</font>");
+        message = message.replace("[g", "<font color=green>").replace("g]","</font>");
+        message = message.replace("[b", "<font color=blue>").replace("b]","</font>");        
+            
 		System.out.println("Formatted Message (Color): " + message);
         return message;
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	private String formatMessage(String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+	private String formatMessage(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
 		System.out.println("Source Message: " + message);
         message = processBold(message);
         message = processItalics(message);
@@ -308,12 +324,12 @@ public class Room implements AutoCloseable {
 
 		System.out.println("Formatted Message: " + message);
         return message;
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	public void processTextFormatting(ServerThread sender, String message) { // UCID: maa, Date: 11/13/23, Milestone 2
+	public void processTextFormatting(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
         String formattedMessage = formatMessage(message);
         sendMessage(sender, formattedMessage);
-    } // UCID: maa, Date: 11/13/23, Milestone 2
+    } // UCID: maa, Date: 11/27/23, Milestone 3
 
 
     protected synchronized void sendMessage(ServerThread sender, String message) {
