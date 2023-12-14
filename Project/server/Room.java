@@ -1,5 +1,6 @@
 package Project.server;
 
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -7,7 +8,9 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 import Project.common.Constants;
+
 
 public class Room implements AutoCloseable {
     protected static Server server;// used to refer to accessible server functions
@@ -24,24 +27,32 @@ public class Room implements AutoCloseable {
     private static Logger logger = Logger.getLogger(Room.class.getName());
 
 
-	// Regular expressions for text formatting
-	private static final String BOLD_REGEX = "\\*([^*]+)\\*";
+
+
+    // Regular expressions for text formatting
+    private static final String BOLD_REGEX = "\\*([^*]+)\\*";
     private static final String ITALICS_REGEX = "-([^\\-]+)-";
     private static final String UNDERLINE_REGEX = "_([^_]+)_";
     private static final String COLOR_REGEX = "\\[([rgbsilver]*)\\s([a-zA-Z]+)\\s([rgbsilver]*)\\]";
-	
+   
     public Room(String name) {
         this.name = name;
         isRunning = true;
     }
 
+
     public String getName() {
         return name;
     }
 
+
     public boolean isRunning() {
         return isRunning;
     }
+
+
+   
+
 
     protected synchronized void addClient(ServerThread client) {
         if (!isRunning) {
@@ -57,6 +68,7 @@ public class Room implements AutoCloseable {
             sendConnectionStatus(client, true);
         }
     }
+
 
     protected synchronized void removeClient(ServerThread client) {
         if (!isRunning) {
@@ -76,6 +88,7 @@ public class Room implements AutoCloseable {
         checkClients();
     }
 
+
     private void syncCurrentUsers(ServerThread client) {
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
@@ -92,6 +105,7 @@ public class Room implements AutoCloseable {
         }
     }
 
+
     /***
      * Checks the number of clients.
      * If zero, begins the cleanup process to dispose of the room
@@ -103,9 +117,10 @@ public class Room implements AutoCloseable {
         }
     }
 
+
     /***
      * Helper function to process messages to trigger different functionality.
-     * 
+     *
      * @param message The original message being sent
      * @param client  The sender of the message (since they'll be the ones
      *                triggering the actions)
@@ -114,7 +129,7 @@ public class Room implements AutoCloseable {
                 // change
     private boolean processCommands(String message, ServerThread client) { // UCID: maa, Date: 11/27/23, Milestone 3
         boolean wasCommand = false;
-    
+   
         try {
             if (message.startsWith(COMMAND_TRIGGER)) {
                 String[] comm = message.split(COMMAND_TRIGGER);
@@ -123,7 +138,7 @@ public class Room implements AutoCloseable {
                 String command = comm2[0];
                 String roomName;
                 wasCommand = true;
-    
+   
                 switch (command) {
                     case CREATE_ROOM:
                         roomName = comm2[1];
@@ -173,9 +188,10 @@ public class Room implements AutoCloseable {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    
+   
         return wasCommand;
     }// UCID: maa, Date: 11/27/23, Milestone 3
+
 
     private void processMuteCommand(ServerThread sender, String targetUsername) {
         // Check if the sender has the authority to mute
@@ -183,40 +199,50 @@ public class Room implements AutoCloseable {
         if (sender != null && targetUsername != null && !targetUsername.isEmpty()) {
             // Find the target ServerThread
             ServerThread targetClient = findClientByUsername(targetUsername);
-    
+   
             if (targetClient != null) {
                 // Mute the target user
                 targetClient.mute(targetUsername);
                 sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' has been muted.");
+               
+            // mute message occurs here, as the muted user is informed about the mute.
+            targetClient.sendMessage(Constants.DEFAULT_CLIENT_ID, "You have been muted by " + sender.getClientName()); // UCID: maa, Date: 12/13/23, Milestone 4
+
+
             } else {
                 // Target user not found
                 sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' not found.");
             }
         }
     }
-    
+   
     private void processUnmuteCommand(ServerThread sender, String targetUsername) {
         // Check if the sender has the authority to unmute
         // For example, you may want to add a check like if (sender.isAdmin()) { ... }
         if (sender != null && targetUsername != null && !targetUsername.isEmpty()) {
             // Find the target ServerThread
             ServerThread targetClient = findClientByUsername(targetUsername);
-    
+   
             if (targetClient != null) {
                 // Unmute the target user
                 targetClient.unmute(targetUsername);
                 sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' has been unmuted.");
+           
+            // unmute message occurs here, as the unmuted user is informed about the unmute.
+            targetClient.sendMessage(Constants.DEFAULT_CLIENT_ID, "You have been unmuted by " + sender.getClientName()); // UCID: maa, Date: 12/13/23, Milestone 4
+
+
             } else {
                 // Target user not found
                 sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' not found.");
             }
         }
     }
-    
+   
     private void sendWhisperMessage(ServerThread sender, String targetUsername, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
         // Find the target ServerThread
         ServerThread targetClient = findClientByUsername(targetUsername);
-    
+   
         if (targetClient != null) {
             // Send the whisper message to both sender and target
             sender.sendMessage(sender.getClientId(), "[Whisper to " + targetUsername + "]: " + message);
@@ -226,7 +252,7 @@ public class Room implements AutoCloseable {
             sender.sendMessage(Constants.DEFAULT_CLIENT_ID, "User '" + targetUsername + "' not found.");
         }
     } // UCID: maa, Date: 11/27/23, Milestone 3
-    
+   
     private ServerThread findClientByUsername(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
         for (ServerThread client : clients) {
             if (client.getClientName().equalsIgnoreCase(username)) {
@@ -236,34 +262,36 @@ public class Room implements AutoCloseable {
         return null; // Target user not found
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
-		// Remove the command prefix
-		String rollCommand = message;
 
-		// Check if it's in Format 1: /roll # or Format 2: /roll #d#
-		Pattern format1Pattern = Pattern.compile("(\\d+)");
-		Pattern format2Pattern = Pattern.compile("(\\d+)d(\\d+)");
-	
-		Matcher format2Matcher = format2Pattern.matcher(rollCommand);
-		Matcher format1Matcher = format1Pattern.matcher(rollCommand);
-	
-		if (format2Matcher.matches()) {
-			int numberOfDice = Integer.parseInt(format2Matcher.group(1));
-			int sides = Integer.parseInt(format2Matcher.group(2));
-			int total = 0;
-			StringBuilder result = new StringBuilder("Rolled: [");
-	
-			for (int i = 0; i < numberOfDice; i++) {
-				int roll = (int) (Math.random() * sides) + 1;
-				result.append(roll);
-	
-				if (i < numberOfDice - 1) {
-					result.append(", ");
-				}
-	
-				total += roll;
-			}
-	
+    private void processRollCommand(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+        // Remove the command prefix
+        String rollCommand = message;
+
+
+        // Check if it's in Format 1: /roll # or Format 2: /roll #d#
+        Pattern format1Pattern = Pattern.compile("(\\d+)");
+        Pattern format2Pattern = Pattern.compile("(\\d+)d(\\d+)");
+   
+        Matcher format2Matcher = format2Pattern.matcher(rollCommand);
+        Matcher format1Matcher = format1Pattern.matcher(rollCommand);
+   
+        if (format2Matcher.matches()) {
+            int numberOfDice = Integer.parseInt(format2Matcher.group(1));
+            int sides = Integer.parseInt(format2Matcher.group(2));
+            int total = 0;
+            StringBuilder result = new StringBuilder("Rolled: [");
+   
+            for (int i = 0; i < numberOfDice; i++) {
+                int roll = (int) (Math.random() * sides) + 1;
+                result.append(roll);
+   
+                if (i < numberOfDice - 1) {
+                    result.append(", ");
+                }
+   
+                total += roll;
+            }
+   
             result.append("] Total: <b>").append(total).append("</b>");
             sendMessage(sender, ("<i>" + result.toString() + "<i>"));
         } else if (format1Matcher.matches()) {
@@ -280,12 +308,14 @@ public class Room implements AutoCloseable {
         sendMessage(sender, "Flipped: <b>" + result + "</b>");
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
+
     // Command helper methods
     protected static void getRooms(String query, ServerThread client) {
         String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
         client.sendRoomsList(rooms,
                 (rooms != null && rooms.length == 0) ? "No rooms found containing your query string" : null);
     }
+
 
     protected static void createRoom(String roomName, ServerThread client) {
         if (server.createNewRoom(roomName)) {
@@ -295,10 +325,11 @@ public class Room implements AutoCloseable {
         }
     }
 
+
     /**
      * Will cause the client to leave the current room and be moved to the new room
      * if applicable
-     * 
+     *
      * @param roomName
      * @param client
      */
@@ -308,30 +339,35 @@ public class Room implements AutoCloseable {
         }
     }
 
+
     protected static void disconnectClient(ServerThread client, Room room) {
         client.disconnect();
         room.removeClient(client);
     }
     // end command helper methods
 
+
     /***
      * Takes a sender and a message and broadcasts the message to all clients in
      * this room. Client is mostly passed for command purposes but we can also use
      * it to extract other client info.
-     * 
+     *
      * @param sender  The client sending the message
      * @param message The message to broadcast inside the room
      */
 
+
      
      private String processBold(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
-		System.out.println("Source Message (Bold): " + message);
+        System.out.println("Source Message (Bold): " + message);
         // Print the original message for debugging
+
 
         // Define the regular expression pattern for detecting bold formatting
         Pattern pattern = Pattern.compile(BOLD_REGEX);
         // Create a matcher object to find matches in the message
         Matcher matcher = pattern.matcher(message);
+
 
         // Iterate through all matches in the message
         while (matcher.find()) {
@@ -341,18 +377,21 @@ public class Room implements AutoCloseable {
             message = message.replace(matcher.group(0), boldText);
         }
 
+
         // Print the formatted message for debugging
-		System.out.println("Formatted Message (Bold): " + message);
+        System.out.println("Formatted Message (Bold): " + message);
         return message;
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	 private String processItalics(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
-		// Print the original message for debugging
+
+     private String processItalics(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+        // Print the original message for debugging
         System.out.println("Source Message (Italics): " + message);
         // Define the regular expression pattern for detecting italics formatting
         Pattern pattern = Pattern.compile(ITALICS_REGEX);
         // Create a matcher object to find matches in the message
         Matcher matcher = pattern.matcher(message);
+
 
         // Iterate through all matches in the message
         while (matcher.find()) {
@@ -362,87 +401,97 @@ public class Room implements AutoCloseable {
             message = message.replace(matcher.group(0), italicText);
         }
         // Print the formatted message for debugging
-		System.out.println("Formatted Message (Italics): " + message);
+        System.out.println("Formatted Message (Italics): " + message);
         return message;
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
+
     private String processUnderline(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
-		System.out.println("Source Message (Underline): " + message);
+        System.out.println("Source Message (Underline): " + message);
         Pattern pattern = Pattern.compile(UNDERLINE_REGEX);
         Matcher matcher = pattern.matcher(message);
+
 
         while (matcher.find()) {
             String underlineText = "<u>" + matcher.group(1) + "</u>";
             message = message.replace(matcher.group(0), underlineText);
         }
 
-		System.out.println("Formatted Message (Underline): " + message);
+
+        System.out.println("Formatted Message (Underline): " + message);
         return message;
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	    private String processColor(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
-		System.out.println("Source Message (Color): " + message);
+
+        private String processColor(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+        System.out.println("Source Message (Color): " + message);
+
 
         message = message.replace("[r", "<font color=red>").replace("r]","</font>");
         message = message.replace("[g", "<font color=green>").replace("g]","</font>");
         message = message.replace("[b", "<font color=blue>").replace("b]","</font>");        
-            
-		System.out.println("Formatted Message (Color): " + message);
+           
+        System.out.println("Formatted Message (Color): " + message);
         return message;
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	private String formatMessage(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
-		System.out.println("Source Message: " + message);
+
+    private String formatMessage(String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+        System.out.println("Source Message: " + message);
         message = processBold(message);
         message = processItalics(message);
         message = processUnderline(message);
         message = processColor(message);
 
-		System.out.println("Formatted Message: " + message);
+
+        System.out.println("Formatted Message: " + message);
         return message;
     } // UCID: maa, Date: 11/27/23, Milestone 3
 
-	public void processTextFormatting(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
+
+    public void processTextFormatting(ServerThread sender, String message) { // UCID: maa, Date: 11/27/23, Milestone 3
         String formattedMessage = formatMessage(message);
         sendMessage(sender, formattedMessage);
     } // UCID: maa, Date: 11/27/23, Milestone 3
+
+
 
 
     protected synchronized void sendMessage(ServerThread sender, String message) {
         if (!isRunning) {
             return;
         }
-    
+   
         if (sender != null && processCommands(message, sender)) {
             // It was a command, don't broadcast
             return;
         }
-    
+   
         message = formatMessage(message); // Format the message for text display
         long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
-    
+   
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
             ServerThread client = iter.next();
-    
+   
             // Check if the sender is muted by the client in the current iteration
             if (client.isMuted(sender.getClientName())) {
                 // Skip broadcasting to muted clients
                 continue;
             }
-    
+   
             boolean messageSent = client.sendMessage(from, message);
             if (!messageSent) {
                 handleDisconnect(iter, client);
             }
         }
-    
+   
         // Broadcast the message to the muted sender as well
         if (sender != null && sender.isMuted(sender.getClientName())) {
             sender.sendMessage(from, message);
         }
     }
-    
+   
     protected synchronized void sendConnectionStatus(ServerThread sender, boolean isConnected) {
         Iterator<ServerThread> iter = clients.iterator();
         while (iter.hasNext()) {
@@ -457,6 +506,7 @@ public class Room implements AutoCloseable {
         }
     }
 
+
     private void handleDisconnect(Iterator<ServerThread> iter, ServerThread client) {
         iter.remove();
         logger.info(String.format("Removed client %s", client.getClientName()));
@@ -464,10 +514,11 @@ public class Room implements AutoCloseable {
         checkClients();
     }
 
+
     public void close() {
         server.removeRoom(this);
         isRunning = false;
         clients.clear();
     }
-	
+   
 }

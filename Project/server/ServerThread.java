@@ -1,5 +1,10 @@
 package Project.server;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -9,15 +14,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-//import Project.common.CellData;
-//import Project.common.CellPayload;
-//import Project.common.Character;
-//import Project.common.CharacterPayload;
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
-//import Project.common.Phase;
-//import Project.common.PositionPayload;
 import Project.common.RoomResultPayload;
 
 /**
@@ -34,6 +33,8 @@ public class ServerThread extends Thread {
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
     private long myClientId;
     private List<String> muteList = new ArrayList<>();
+    private static final String MUTE_LIST_FILE_SUFFIX = "_mute_list.txt";
+
 
     public void setClientId(long id) {
         myClientId = id;
@@ -52,6 +53,7 @@ public class ServerThread extends Thread {
         // get communication channels to single client
         this.client = myClient;
         this.currentRoom = room;
+        loadMuteListFromFile();
 
     }
 
@@ -157,24 +159,56 @@ public class ServerThread extends Thread {
         p.setPayloadType(isConnected ? PayloadType.CONNECT : PayloadType.DISCONNECT);
         p.setClientId(clientId);
         p.setClientName(who);
-        // p.setMessage(isConnected ? "connected" : "disconnected");
         p.setMessage(String.format("%s the room %s", (isConnected ? "Joined" : "Left"), currentRoom.getName()));
         return send(p);
     }
 
-        public boolean isMuted(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
+    public boolean isMuted(String username) {
         return muteList.contains(username);
     }
 
-    public void mute(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
+    public void mute(String username) {
         if (!muteList.contains(username)) {
             muteList.add(username);
+            saveMuteListToFile();
         }
-    } 
-
-    public void unmute(String username) { // UCID: maa, Date: 11/27/23, Milestone 3
-        muteList.remove(username);
     }
+
+    public void unmute(String username) {
+        muteList.remove(username);
+        saveMuteListToFile();
+    }
+
+        private void loadMuteListFromFile() { // UCID: maa, Date: 12/13/23, Milestone 4
+        try {
+            String fileName = clientName + MUTE_LIST_FILE_SUFFIX;
+            File file = new File(fileName);
+            if (file.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        muteList.add(line);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            logger.severe("Error loading mute list from file: " + e.getMessage());
+        }
+    } // UCID: maa, Date: 12/13/23, Milestone 4
+
+    private void saveMuteListToFile() { // UCID: maa, Date: 12/13/23, Milestone 4
+        try {
+            String fileName = clientName + MUTE_LIST_FILE_SUFFIX;
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
+                for (String username : muteList) {
+                    writer.write(username);
+                    writer.newLine();
+                }
+            }
+        } catch (IOException e) {
+            logger.severe("Error saving mute list to file: " + e.getMessage());
+        }
+    } // UCID: maa, Date: 12/13/23, Milestone 4
 
     private boolean send(Payload payload) {
         try {
@@ -184,14 +218,10 @@ public class ServerThread extends Thread {
             return true;
         } catch (IOException e) {
             logger.info("Error sending message to client (most likely disconnected)");
-            // uncomment this to inspect the stack trace
-            // e.printStackTrace();
             cleanup();
             return false;
         } catch (NullPointerException ne) {
             logger.info("Message was attempted to be sent before outbound stream was opened: " + payload);
-            // uncomment this to inspect the stack trace
-            // e.printStackTrace();
             return true;// true since it's likely pending being opened
         }
     }
@@ -200,21 +230,15 @@ public class ServerThread extends Thread {
     @Override
     public void run() {
         try (ObjectOutputStream out = new ObjectOutputStream(client.getOutputStream());
-                ObjectInputStream in = new ObjectInputStream(client.getInputStream());) {
+             ObjectInputStream in = new ObjectInputStream(client.getInputStream());) {
             this.out = out;
             isRunning = true;
             Payload fromClient;
-            while (isRunning && // flag to let us easily control the loop
-                    (fromClient = (Payload) in.readObject()) != null // reads an object from inputStream (null would
-                                                                     // likely mean a disconnect)
-            ) {
-
+            while (isRunning && (fromClient = (Payload) in.readObject()) != null) {
                 logger.info("Received from client: " + fromClient);
                 processPayload(fromClient);
-
-            } // close while loop
+            }
         } catch (Exception e) {
-            // happens when client disconnects
             e.printStackTrace();
             logger.info("Client disconnected");
         } finally {
@@ -252,7 +276,6 @@ public class ServerThread extends Thread {
                 break;
             case READY:
                 try {
-                    //((GameRoom) currentRoom).setReady(this);
                 } catch (Exception e) {
                     logger.severe(String.format("There was a problem during readyCheck %s", e.getMessage()));
                     e.printStackTrace();
@@ -260,15 +283,6 @@ public class ServerThread extends Thread {
                 break;
             case CHARACTER:
                 try {
-                    //CharacterPayload cp = (CharacterPayload) p;
-                    // Here I'm making the assumption if the passed Character is null, it's likely a
-                    // create request,
-                    // if the passed character is not null, then some of the properties will be used
-                    // for loading
-                    //if (cp.getCharacter() == null) {
-                        //((GameRoom) currentRoom).createCharacter(this, cp.getCharacterType());
-                    //} else {
-                        //((GameRoom) currentRoom).loadCharacter(this, cp.getCharacter());
                     }
                  catch (Exception e) {
                     logger.severe(String.format("There was a problem during character handling %s", e.getMessage()));
@@ -277,8 +291,6 @@ public class ServerThread extends Thread {
                 break;
             case MOVE:
                 try {
-                    //PositionPayload pp = (PositionPayload) p;
-                    //((GameRoom) currentRoom).handleMove(pp.getX(), pp.getY(), this);
                 } catch (Exception e) {
                     logger.severe(String.format("There was a problem during position handling %s", e.getMessage()));
                     e.printStackTrace();
