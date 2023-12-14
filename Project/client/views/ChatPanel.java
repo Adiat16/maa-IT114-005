@@ -9,6 +9,9 @@ import java.awt.event.ContainerEvent;
 import java.awt.event.ContainerListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,8 +21,8 @@ import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
+import javax.swing.JScrollBar;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 
@@ -41,12 +44,10 @@ public class ChatPanel extends JPanel {
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setAlignmentY(Component.BOTTOM_ALIGNMENT);
 
-        // wraps a viewport to provide scroll capabilities
         JScrollPane scroll = new JScrollPane(content);
         scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(BorderFactory.createEmptyBorder());
-        // no need to add content specifically because scroll wraps it
         wrapper.add(scroll);
         this.add(wrapper, BorderLayout.CENTER);
 
@@ -55,13 +56,10 @@ public class ChatPanel extends JPanel {
         JTextField textValue = new JTextField();
         input.add(textValue);
         JButton button = new JButton("Send");
-        // lets us submit with the enter key instead of just the button click
         textValue.addKeyListener(new KeyListener() {
 
             @Override
-            public void keyTyped(KeyEvent e) {
-
-            }
+            public void keyTyped(KeyEvent e) {}
 
             @Override
             public void keyPressed(KeyEvent e) {
@@ -71,29 +69,33 @@ public class ChatPanel extends JPanel {
             }
 
             @Override
-            public void keyReleased(KeyEvent e) {
-
-            }
-
+            public void keyReleased(KeyEvent e) {}
         });
         button.addActionListener((event) -> {
             try {
                 String text = textValue.getText().trim();
                 if (text.length() > 0) {
                     Client.INSTANCE.sendMessage(text);
-                    textValue.setText("");// clear the original text
-
-                    // debugging
+                    textValue.setText("");
                     logger.log(Level.FINEST, "Content: " + content.getSize());
                     logger.log(Level.FINEST, "Parent: " + this.getSize());
-
                 }
             } catch (NullPointerException e) {
             } catch (IOException e1) {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
         });
+
+        JButton exportButton = new JButton("Export Chat History");
+        exportButton.addActionListener((event) -> {
+            try {
+                exportChatHistory();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        input.add(exportButton);
+
         chatArea = content;
         input.add(button);
         userListPanel = new UserListPanel(controls);
@@ -105,7 +107,6 @@ public class ChatPanel extends JPanel {
 
             @Override
             public void componentAdded(ContainerEvent e) {
-
                 if (chatArea.isVisible()) {
                     chatArea.revalidate();
                     chatArea.repaint();
@@ -119,14 +120,11 @@ public class ChatPanel extends JPanel {
                     chatArea.repaint();
                 }
             }
-
         });
+
         this.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
-                // System.out.println("Resized to " + e.getComponent().getSize());
-                // rough concepts for handling resize
-                // set the dimensions based on the frame size
                 Dimension frameSize = wrapper.getParent().getParent().getSize();
                 int w = (int) Math.ceil(frameSize.getWidth() * .3f);
 
@@ -156,21 +154,39 @@ public class ChatPanel extends JPanel {
 
     public void addText(String text) {
         JPanel content = chatArea;
-        // add message
         JEditorPane textContainer = new JEditorPane("text/html", text);
-
-        // sizes the panel to attempt to take up the width of the container
-        // and expand in height based on word wrapping
         textContainer.setLayout(null);
         textContainer.setPreferredSize(
                 new Dimension(content.getWidth(), ClientUtils.calcHeightForText(this, text, content.getWidth())));
         textContainer.setMaximumSize(textContainer.getPreferredSize());
         textContainer.setEditable(false);
         ClientUtils.clearBackground(textContainer);
-        // add to container and tell the layout to revalidate
         content.add(textContainer);
-        // scroll down on new message
         JScrollBar vertical = ((JScrollPane) chatArea.getParent().getParent()).getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
     }
+
+    private void exportChatHistory() throws IOException {
+        StringBuilder chatHistory = new StringBuilder();
+
+        for (Component component : chatArea.getComponents()) {
+            if (component instanceof JEditorPane) {
+                JEditorPane textContainer = (JEditorPane) component;
+                chatHistory.append(textContainer.getText()).append("\n");
+            }
+        }
+
+        String fileName = "ChatHistory_" + System.currentTimeMillis() + ".txt";
+        File outputFile = new File(System.getProperty("user.home"), fileName);
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+            writer.write(chatHistory.toString());
+        }
+
+        System.out.println("Chat history exported to: " + outputFile.getAbsolutePath());
+    }
 }
+
+
+
+
